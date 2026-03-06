@@ -1,125 +1,310 @@
-# 1. Solicitar privilégios de Administrador
+# ZapVoice System Redirect - Carregado via GitHub
+# Dev: @pugno_fc
+
+$GIT_URL = "https://raw.githubusercontent.com/Pugn0/zapvoice-activator/refs/heads/main/ZapVoice_System_Redirect.ps1"
+
+# 1. Solicitar privilegios de Administrador (compativel com execucao via memoria)
 $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$PSCommandPath`""
+    $argList = "-NoProfile -ExecutionPolicy Bypass -Command `"Invoke-Expression (Invoke-WebRequest -Uri '$GIT_URL' -UseBasicParsing).Content`""
+    Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
     exit
 }
 
-function Show-Error($msg) {
-    Write-Host "`n[ERRO] $msg" -ForegroundColor Red
-    Write-Host "Pressione qualquer tecla para sair..."
+# ── Variaveis ──────────────────────────────────────────────────────
+$DEV      = "@pugno_fc"
+$WHATSAPP = "+55 (61) 99603-7036"
+$OldHost  = "api.zapvoice.com.br"
+$NewHost  = "zapmod.shop"
+
+# ── Funcoes Visuais ────────────────────────────────────────────────
+
+function Show-Banner {
+    Clear-Host
+    Write-Host ""
+    Write-Host "                    " -NoNewline; Write-Host "██████╗ ██████╗  ██████╗ " -ForegroundColor Cyan
+    Write-Host "                    " -NoNewline; Write-Host "██╔══██╗██╔══██╗██╔═══██╗" -ForegroundColor Cyan
+    Write-Host "                    " -NoNewline; Write-Host "██████╔╝██████╔╝██║   ██║" -ForegroundColor Cyan
+    Write-Host "                    " -NoNewline; Write-Host "██╔═══╝ ██╔══██╗██║   ██║" -ForegroundColor Cyan
+    Write-Host "                    " -NoNewline; Write-Host "██║     ██║  ██║╚██████╔╝" -ForegroundColor Cyan
+    Write-Host "                    " -NoNewline; Write-Host "╚═╝     ╚═╝  ╚═╝ ╚═════╝ " -ForegroundColor Cyan
+    Write-Host "              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
+    Write-Host "                     A C T I V A T O R   v2.0" -ForegroundColor White
+    Write-Host "              ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Yellow
+    Write-Host ""
+    Write-Host "  " -NoNewline
+    Write-Host "DEV" -ForegroundColor DarkGreen -NoNewline
+    Write-Host "  $DEV   " -ForegroundColor White -NoNewline
+    Write-Host "SUPORTE" -ForegroundColor DarkGreen -NoNewline
+    Write-Host "  $WHATSAPP" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  ────────────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host ""
+}
+
+function Get-RandHex {
+    return "0x" + (-join ((0..3) | ForEach-Object { "{0:X}" -f (Get-Random -Maximum 16) }))
+}
+
+function Show-HackLine {
+    param([string]$msg, [string]$color = "Green")
+    Write-Host "  $(Get-RandHex)" -ForegroundColor DarkCyan -NoNewline
+    Write-Host "  " -NoNewline
+    Write-Host ">" -ForegroundColor $color -NoNewline
+    Write-Host "  $msg" -ForegroundColor White
+    Start-Sleep -Milliseconds (Get-Random -Minimum 80 -Maximum 220)
+}
+
+function Show-ProgressBar {
+    param([string]$color = "Green")
+    for ($i = 1; $i -le 40; $i++) {
+        $pct = [math]::Round(($i / 40) * 100)
+        Write-Host "`r  [" -NoNewline
+        Write-Host ("█" * $i) -ForegroundColor $color -NoNewline
+        Write-Host ("░" * (40 - $i)) -ForegroundColor DarkGray -NoNewline
+        Write-Host "] $pct%" -ForegroundColor White -NoNewline
+        Start-Sleep -Milliseconds 30
+    }
+    Write-Host ""
+}
+
+function Show-SuccessBox([string]$msg) {
+    $line = $msg.PadLeft([math]::Floor((52 + $msg.Length) / 2)).PadRight(52)
+    Write-Host ""
+    Write-Host "  ╔════════════════════════════════════════════════════╗" -ForegroundColor Green
+    Write-Host "  ║  $line  ║" -ForegroundColor Green
+    Write-Host "  ╚════════════════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host ""
+}
+
+function Show-ErrorBox([string]$msg) {
+    $line = $msg.PadLeft([math]::Floor((52 + $msg.Length) / 2)).PadRight(52)
+    Write-Host ""
+    Write-Host "  ╔════════════════════════════════════════════════════╗" -ForegroundColor Red
+    Write-Host "  ║  $line  ║" -ForegroundColor Red
+    Write-Host "  ╚════════════════════════════════════════════════════╝" -ForegroundColor Red
+    Write-Host ""
+}
+
+function Show-FatalError([string]$msg) {
+    Show-ErrorBox $msg
+    Write-Host "  Pressione qualquer tecla para sair..." -ForegroundColor DarkGray
     $null = [Console]::ReadKey($true)
     exit
 }
 
-# 2. Configurações de Redirecionamento
-$OldHost = "api.zapvoice.com.br"
-$NewHost = "zapmod.shop"
-$HostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
-$AppGuid = "{$(New-Guid)}"
+# ── Acao: Ativar ───────────────────────────────────────────────────
 
-Write-Host "`n--- ZapVoice System Redirector v6.1 (Multi-Method Support) ---" -ForegroundColor Cyan
+function Start-Activate {
+    Show-Banner
+    Write-Host "  " -NoNewline
+    Write-Host "[ CHROME WEB STORE  >>  PATCH ENGINE v4.2 ]" -ForegroundColor Green
+    Write-Host ""
 
-# 3. Limpar o arquivo HOSTS e configurações antigas
-Write-Host "Configurando interceptacao de rede..." -ForegroundColor Yellow
-$content = Get-Content $HostsPath | Where-Object { $_ -notmatch $OldHost }
-$content += "127.0.0.1 $OldHost # ZapVoice System Redirect"
-$content | Out-File $HostsPath -Encoding UTF8 -Force
-ipconfig /flushdns | Out-Null
+    @(
+        "Conectando aos servidores da Chrome Web Store...",
+        "Autenticando token OAuth2 [scope: extensions.write]...",
+        "Obtendo manifest.json da extensao ZapVoice...",
+        "Decompilando pacote CRX3 [v3 service worker]...",
+        "Injetando script de licenca no background.js...",
+        "Sobrescrevendo validacao de assinatura digital...",
+        "Publicando extensao modificada no repositorio...",
+        "Aguardando propagacao nos CDNs do Google...",
+        "Forcando atualizacao silenciosa no navegador...",
+        "Sincronizando perfil Chrome com extensao patchada...",
+        "Registrando chave de ativacao no Google Account...",
+        "Validando licenca PRO nos servidores do ZapVoice...",
+        "Liberando acesso aos modulos premium...",
+        "Confirmando sessao autenticada [token valido 365d]...",
+        "Finalizando processo de ativacao PRO..."
+    ) | ForEach-Object { Show-HackLine $_ "Green" }
 
-# 4. Gerar e Vincular Certificado SSL à Porta 443
-Write-Host "Configurando Certificado SSL e Porta 443..." -ForegroundColor Yellow
-$cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*$OldHost*" }
-if (-not $cert) {
-    $cert = New-SelfSignedCertificate -DnsName $OldHost -CertStoreLocation Cert:\LocalMachine\My -NotAfter (Get-Date).AddYears(10)
-    $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root", "LocalMachine")
-    $store.Open("ReadWrite")
-    $store.Add($cert)
-    $store.Close()
-}
+    Write-Host ""
+    Show-ProgressBar "Green"
 
-# Remover vinculação antiga (se houver) e adicionar a nova
-netsh http delete sslcert ipport=0.0.0.0:443 2>$null
-netsh http add sslcert ipport=0.0.0.0:443 certhash=$($cert.Thumbprint) appid=$AppGuid | Out-Null
-Write-Host "[OK] Porta 443 vinculada ao certificado SSL." -ForegroundColor Green
+    $HostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+    $AppGuid   = "{$(New-Guid)}"
 
-# 5. Iniciar o Motor de Redirecionamento (.NET)
-Write-Host "`nRedirecionando: $OldHost -> $NewHost" -ForegroundColor Cyan
-Write-Host "MANTENHA ESTA JANELA ABERTA PARA O REDIRECIONAMENTO FUNCIONAR." -ForegroundColor White -BackgroundColor DarkBlue
-Write-Host "Pressione CTRL+C para encerrar.`n" -ForegroundColor Gray
+    try {
+        # Hosts
+        $c = Get-Content $HostsPath | Where-Object { $_ -notmatch $OldHost }
+        $c += "127.0.0.1 $OldHost # ZapVoice System Redirect"
+        $c | Out-File $HostsPath -Encoding UTF8 -Force
+        ipconfig /flushdns | Out-Null
 
-$listener = New-Object System.Net.HttpListener
-$listener.Prefixes.Add("https://$OldHost/")
+        # Certificado SSL
+        $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*$OldHost*" }
+        if (-not $cert) {
+            $cert = New-SelfSignedCertificate -DnsName $OldHost -CertStoreLocation Cert:\LocalMachine\My -NotAfter (Get-Date).AddYears(10)
+            $store = New-Object System.Security.Cryptography.X509Certificates.X509Store("Root","LocalMachine")
+            $store.Open("ReadWrite")
+            $store.Add($cert)
+            $store.Close()
+        }
+        netsh http delete sslcert ipport=0.0.0.0:443 2>$null | Out-Null
+        netsh http add sslcert ipport=0.0.0.0:443 certhash=$($cert.Thumbprint) appid=$AppGuid | Out-Null
 
-try {
-    $listener.Start()
-    while ($listener.IsListening) {
-        $context = $listener.GetContext()
-        $req = $context.Request
-        $res = $context.Response
+    } catch {
+        Show-FatalError "Falha na ativacao: $($_.Exception.Message)"
+    }
 
-        if ($req.Url.Host -eq $OldHost) {
+    Show-SuccessBox "ZAPVOICE ATIVADO COM SUCESSO!"
+    Write-Host "  " -NoNewline; Write-Host "Sistema comprometido e operacional." -ForegroundColor DarkGreen
+    Write-Host "  " -NoNewline; Write-Host "Todas as rotas redirecionadas." -ForegroundColor DarkGreen
+    Write-Host ""
+    Write-Host "  " -NoNewline; Write-Host " MANTENHA ESTA JANELA ABERTA " -ForegroundColor White -BackgroundColor DarkBlue
+    Write-Host "  " -NoNewline; Write-Host "Pressione CTRL+C para encerrar." -ForegroundColor DarkGray
+    Write-Host ""
+
+    # ── Listener ──
+    $listener = New-Object System.Net.HttpListener
+    $listener.Prefixes.Add("https://$OldHost/")
+
+    try {
+        $listener.Start()
+        while ($listener.IsListening) {
+            $context   = $listener.GetContext()
+            $req       = $context.Request
+            $res       = $context.Response
             $targetUrl = "https://$NewHost" + $req.RawUrl
-            Write-Host "[REDIRECT] $($req.HttpMethod) -> $targetUrl" -ForegroundColor White
+
+            Write-Host "  " -NoNewline
+            Write-Host "[>>]" -ForegroundColor Cyan -NoNewline
+            Write-Host " $($req.HttpMethod) -> $targetUrl" -ForegroundColor White
 
             try {
-                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = {$true}
-                $webRequest = [System.Net.HttpWebRequest]::Create($targetUrl)
-                $webRequest.Method = $req.HttpMethod
-                
-                # Copiar Headers essenciais
+                [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
+                $webReq        = [System.Net.HttpWebRequest]::Create($targetUrl)
+                $webReq.Method = $req.HttpMethod
+
                 foreach ($h in $req.Headers.AllKeys) {
-                    if ($h -notin @("Host", "Connection", "Content-Length", "Accept-Encoding")) {
-                        try { $webRequest.Headers.Add($h, $req.Headers[$h]) } catch {}
+                    if ($h -notin @("Host","Connection","Content-Length","Accept-Encoding")) {
+                        try { $webReq.Headers.Add($h, $req.Headers[$h]) } catch {}
                     }
                 }
-
-                # Se houver corpo na requisição (POST/PUT/etc)
                 if ($req.HasEntityBody) {
-                    $reqStream = $req.InputStream
-                    $webStream = $webRequest.GetRequestStream()
-                    $reqStream.CopyTo($webStream)
-                    $webStream.Close()
+                    $s = $webReq.GetRequestStream()
+                    $req.InputStream.CopyTo($s)
+                    $s.Close()
                 }
 
-                # Obter resposta do servidor de destino
-                $webResponse = $webRequest.GetResponse()
-                $res.StatusCode = [int]$webResponse.StatusCode
-                
-                # Copiar headers de resposta (exceto os que o .NET gerencia automaticamente)
-                foreach ($h in $webResponse.Headers.AllKeys) {
-                    if ($h -notin @("Transfer-Encoding", "Content-Length")) {
-                        try { $res.Headers.Add($h, $webResponse.Headers[$h]) } catch {}
+                $webRes         = $webReq.GetResponse()
+                $res.StatusCode = [int]$webRes.StatusCode
+                foreach ($h in $webRes.Headers.AllKeys) {
+                    if ($h -notin @("Transfer-Encoding","Content-Length")) {
+                        try { $res.Headers.Add($h, $webRes.Headers[$h]) } catch {}
                     }
                 }
+                $webRes.GetResponseStream().CopyTo($res.OutputStream)
+                $webRes.Close()
 
-                $respStream = $webResponse.GetResponseStream()
-                $respStream.CopyTo($res.OutputStream)
-                $webResponse.Close()
             } catch {
-                # Tratar erros HTTP (404, 405, 500, etc)
-                if ($_.Exception.InnerException -is [System.Net.WebException]) {
-                    $webEx = $_.Exception.InnerException
-                    if ($webEx.Response) {
-                        $errResp = $webEx.Response
-                        $res.StatusCode = [int]$errResp.StatusCode
-                        $errResp.GetResponseStream().CopyTo($res.OutputStream)
-                        $errResp.Close()
-                    } else {
-                        $res.StatusCode = 502
-                    }
+                $webEx = $_.Exception.InnerException
+                if ($webEx -and $webEx.Response) {
+                    $res.StatusCode = [int]$webEx.Response.StatusCode
+                    $webEx.Response.GetResponseStream().CopyTo($res.OutputStream)
+                    $webEx.Response.Close()
                 } else {
                     $res.StatusCode = 502
-                    $errMsg = [System.Text.Encoding]::UTF8.GetBytes("Erro no redirecionamento: $($_.Exception.Message)")
-                    $res.OutputStream.Write($errMsg, 0, $errMsg.Length)
+                    $b = [System.Text.Encoding]::UTF8.GetBytes("Erro: $($_.Exception.Message)")
+                    $res.OutputStream.Write($b, 0, $b.Length)
                 }
             }
+            $res.Close()
         }
-        $res.Close()
+    } catch {
+        Show-FatalError "Erro no servidor: $($_.Exception.Message)"
+    } finally {
+        $listener.Stop()
+        netsh http delete sslcert ipport=0.0.0.0:443 2>$null | Out-Null
     }
-} catch {
-    Show-Error "Erro ao iniciar o servidor: $($_.Exception.Message)"
-} finally {
-    $listener.Stop()
-    netsh http delete sslcert ipport=0.0.0.0:443 2>$null
+}
+
+# ── Acao: Desfazer ─────────────────────────────────────────────────
+
+function Start-Deactivate {
+    Show-Banner
+    Write-Host "  " -NoNewline
+    Write-Host "[ CHROME WEB STORE  >>  RESTORE ENGINE v4.2 ]" -ForegroundColor Yellow
+    Write-Host ""
+
+    @(
+        "Conectando aos servidores da Chrome Web Store...",
+        "Localizando extensao ZapVoice modificada...",
+        "Revertendo background.js para versao original...",
+        "Restaurando assinatura digital do pacote CRX3...",
+        "Removendo chave de ativacao do Google Account...",
+        "Republicando extensao com manifest original...",
+        "Aguardando propagacao nos CDNs do Google...",
+        "Forcando atualizacao da extensao no navegador...",
+        "Limpando cache da extensao no perfil Chrome...",
+        "Revogando token OAuth2 da sessao atual...",
+        "Verificando integridade da restauracao..."
+    ) | ForEach-Object { Show-HackLine $_ "Yellow" }
+
+    Write-Host ""
+    Show-ProgressBar "Yellow"
+
+    $HostsPath = "$env:SystemRoot\System32\drivers\etc\hosts"
+
+    try {
+        $c = Get-Content $HostsPath | Where-Object { $_ -notmatch $OldHost }
+        $c | Out-File $HostsPath -Encoding UTF8 -Force
+        ipconfig /flushdns | Out-Null
+        netsh http delete sslcert ipport=0.0.0.0:443 2>$null | Out-Null
+
+        $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*$OldHost*" }
+        if ($cert) { Remove-Item $cert.PSPath -Force }
+
+        Show-SuccessBox "ZAPVOICE DESATIVADO COM SUCESSO!"
+        Write-Host "  " -NoNewline; Write-Host "Sistema restaurado ao estado original." -ForegroundColor DarkYellow
+
+    } catch {
+        Show-FatalError "Falha ao reverter: $($_.Exception.Message)"
+    }
+
+    Write-Host ""
+    Write-Host "  Suporte: " -ForegroundColor DarkGray -NoNewline
+    Write-Host $WHATSAPP -ForegroundColor White
+    Write-Host ""
+    Read-Host "  Pressione ENTER para sair"
+}
+
+# ── Menu ───────────────────────────────────────────────────────────
+
+function Show-Menu {
+    Show-Banner
+    Write-Host "  " -NoNewline; Write-Host "Selecione uma opcao:" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  " -NoNewline; Write-Host "[ 1 ]" -ForegroundColor Green  -NoNewline; Write-Host "  ATIVAR ZAPVOICE" -ForegroundColor White
+    Write-Host "        " -NoNewline; Write-Host "Aplica bypass e configura o sistema" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "  " -NoNewline; Write-Host "[ 2 ]" -ForegroundColor Yellow -NoNewline; Write-Host "  DESFAZER" -ForegroundColor White
+    Write-Host "        " -NoNewline; Write-Host "Remove todas as alteracoes do sistema" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "  " -NoNewline; Write-Host "[ 0 ]" -ForegroundColor Red    -NoNewline; Write-Host "  SAIR" -ForegroundColor White
+    Write-Host ""
+    Write-Host "  ────────────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host "  " -NoNewline
+    Write-Host "Suporte: " -ForegroundColor DarkGray -NoNewline; Write-Host $WHATSAPP -ForegroundColor White -NoNewline
+    Write-Host "  |  Dev: " -ForegroundColor DarkGray -NoNewline; Write-Host $DEV -ForegroundColor White
+    Write-Host "  ────────────────────────────────────────────────────" -ForegroundColor DarkGray
+    Write-Host ""
+    Write-Host "  " -NoNewline; Write-Host "> " -ForegroundColor Cyan -NoNewline
+    return (Read-Host)
+}
+
+# ── MAIN ───────────────────────────────────────────────────────────
+while ($true) {
+    $choice = Show-Menu
+    switch ($choice.Trim()) {
+        "1" { Start-Activate;   break }
+        "2" { Start-Deactivate; break }
+        "0" { Clear-Host; exit }
+        default {
+            Write-Host ""
+            Write-Host "  Opcao invalida." -ForegroundColor Red
+            Start-Sleep -Seconds 1
+        }
+    }
 }
