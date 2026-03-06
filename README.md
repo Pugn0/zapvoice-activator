@@ -1,100 +1,88 @@
 # ZapVoice Pro — Activator
 
 > Ferramenta de ativação automática do ZapVoice PRO.  
-> Substitui a configuração manual do Charles Proxy por um executável simples.
+> Substitui a configuração manual do Charles Proxy por um único executável.
 
 ---
 
 ## Como funciona
 
-O activator realiza todo o processo de ativação automaticamente:
+O activator realiza todo o processo automaticamente:
 
-- Gera um certificado SSL local para o domínio da API
-- Instala o certificado CA na loja de certificados do sistema
-- Redireciona o tráfego da API via arquivo hosts
-- Sobe um proxy HTTPS local transparente
+- Redireciona o tráfego da API via arquivo `hosts`
+- Gera e instala um certificado SSL local na loja de certificados do sistema
+- Sobe um proxy HTTPS transparente na porta 443
 - Configura inicialização automática com o sistema
 
 ---
 
-## Requisitos
+## Distribuição
 
-- Python 3.10 ou superior
-- pip
-- Git (opcional, recomendado — inclui OpenSSL no Windows)
+O usuário recebe apenas o **`ZapMod.exe`**. Ao executar:
 
----
+1. O sistema solicita permissão de Administrador
+2. O script mais recente é baixado diretamente do GitHub (sem salvar no disco)
+3. O menu de ativação é exibido automaticamente
 
-## Instalação e build
-
-### 1. Clone o repositório
-
-```bash
-git clone https://github.com/Pugn0/zapvoice-activator.git
-cd zapvoice-activator
-```
-
-### 2. Crie o ambiente virtual e instale as dependências
-
-**Windows:**
-```powershell
-py -m venv venv
-venv\Scripts\activate
-pip install pyinstaller cryptography
-```
-
-**macOS / Linux:**
-```bash
-python3 -m venv venv
-source venv/bin/activate
-pip install pyinstaller cryptography
-```
-
-### 3. Gere o executável
-
-**Windows** (com ícone):
-```powershell
-pyinstaller --onefile --icon="zapvoice.ico" --name "ZapVoice-Activator" zapvoice_redirect.py
-```
-
-**macOS / Linux:**
-```bash
-pyinstaller --onefile --name "ZapVoice-Activator" zapvoice_redirect.py
-```
-
-O executável gerado estará em:
-```
-dist/ZapVoice-Activator.exe   ← Windows
-dist/ZapVoice-Activator        ← macOS / Linux
-```
+Toda manutenção é feita no repositório — **sem redistribuir o executável**.
 
 ---
 
-## Rebuild rápido
+## Uso
 
-Com o ambiente virtual já criado, para rebuildar após editar o script:
+Execute o `ZapMod.exe` como **Administrador** e selecione uma opção:
 
-**Windows:**
-```powershell
-venv\Scripts\activate && pyinstaller --onefile --icon="zapvoice.ico" --name "ZapVoice-Activator" zapvoice_redirect.py
+```
+[ 1 ]  ATIVAR ZAPVOICE    → aplica todas as configurações
+[ 2 ]  DESFAZER           → remove todas as alterações do sistema
+[ 0 ]  SAIR
 ```
 
-**macOS / Linux:**
-```bash
-source venv/bin/activate && pyinstaller --onefile --name "ZapVoice-Activator" zapvoice_redirect.py
-```
+> Mantenha a janela aberta enquanto o ZapVoice estiver em uso.  
+> Pressione `CTRL+C` para encerrar o proxy.
 
 ---
 
-## Dependências
+## Build do executável
 
-| Pacote | Versão mínima | Uso |
-|---|---|---|
-| `pyinstaller` | 6.0+ | Empacotamento do executável |
-| `cryptography` | 40.0+ | Geração de certificados SSL |
+### Requisitos
 
-> A lib `cryptography` é usada como fallback caso o OpenSSL não esteja disponível no sistema.  
-> Se o Git for Windows estiver instalado, o OpenSSL nativo será usado automaticamente.
+- PowerShell 5.1 ou superior
+- Módulo `ps2exe`
+
+### 1. Instalar dependências
+
+```powershell
+Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+Install-Module ps2exe -Scope CurrentUser -Force
+```
+
+### 2. Compilar o executável
+
+```powershell
+cd "pasta-do-projeto"
+
+$code = 'Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command \"Invoke-Expression (Invoke-WebRequest -Uri ''https://raw.githubusercontent.com/Pugn0/zapvoice-activator/refs/heads/main/ZapVoice_System_Redirect.ps1'' -UseBasicParsing).Content\""'
+$code | Out-File -Encoding UTF8 "ZapMod.ps1"
+
+Invoke-ps2exe -InputFile "ZapMod.ps1" -OutputFile "ZapMod.exe" -requireAdmin -title "ZapVoice Activator" -version "2.0.0.0" -iconFile "zapvoice.ico" -noOutput
+
+Remove-Item "ZapMod.ps1"
+```
+
+O executável gerado será o `ZapMod.exe` com o ícone `zapvoice.ico`.
+
+---
+
+## Manutenção
+
+Para atualizar o comportamento do activator para **todos os usuários**:
+
+1. Edite o `ZapVoice_System_Redirect.ps1`
+2. Faça commit e push no GitHub
+3. Pronto — na próxima execução do `ZapMod.exe` a versão nova já é carregada
+
+**Não é necessário redistribuir o executável.**
 
 ---
 
@@ -102,37 +90,10 @@ source venv/bin/activate && pyinstaller --onefile --name "ZapVoice-Activator" za
 
 ```
 zapvoice-activator/
-├── zapvoice_redirect.py   # Script principal
-├── zapvoice.ico           # Ícone do executável
-├── README.md              # Este arquivo
-├── venv/                  # Ambiente virtual (não versionar)
-├── build/                 # Gerado pelo PyInstaller (não versionar)
-└── dist/                  # Executável final (não versionar)
-```
-
----
-
-## .gitignore recomendado
-
-```
-venv/
-build/
-dist/
-*.spec
-__pycache__/
-*.pyc
-```
-
----
-
-## Uso do executável
-
-Execute como **administrador** e selecione uma opção no menu:
-
-```
-[ 1 ]  ATIVAR ZAPVOICE    → aplica todas as configurações
-[ 2 ]  DESFAZER           → remove todas as alterações do sistema
-[ 0 ]  SAIR
+├── ZapVoice_System_Redirect.ps1   # Script principal (carregado via GitHub)
+├── ZapMod.exe                     # Executável distribuído aos usuários
+├── zapvoice.ico                   # Ícone do executável
+└── README.md                      # Este arquivo
 ```
 
 ---
