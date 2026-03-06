@@ -1,0 +1,5 @@
+execute esse comando para criar o exe. abra o o poweshell como adm
+
+cd "E:\programacao\python\pugno\2026\07 - zapvoice-hook-api"
+
+Invoke-ps2exe -InputFile "ZapMod.ps1" -OutputFile "ZapMod.exe" -requireAdmin -title "ZapVoice Activator" -version "2.0.0.0" -iconFile "zapvoice.ico"

