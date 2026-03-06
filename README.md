@@ -57,17 +57,22 @@ Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
 Install-Module ps2exe -Scope CurrentUser -Force
 ```
 
-### 2. Compilar o executável
+### 2. Conteúdo do ZapMod.ps1
+
+Crie o arquivo `ZapMod.ps1` na pasta do projeto com o seguinte conteúdo:
 
 ```powershell
-cd "pasta-do-projeto"
+$url = 'https://raw.githubusercontent.com/Pugn0/zapvoice-activator/refs/heads/main/ZapVoice_System_Redirect.ps1'
+$code = (Invoke-WebRequest -Uri $url -UseBasicParsing).Content
+Invoke-Expression $code
+```
 
-$code = 'Start-Process powershell.exe -Verb RunAs -ArgumentList "-NoProfile -ExecutionPolicy Bypass -Command \"Invoke-Expression (Invoke-WebRequest -Uri ''https://raw.githubusercontent.com/Pugn0/zapvoice-activator/refs/heads/main/ZapVoice_System_Redirect.ps1'' -UseBasicParsing).Content\""'
-$code | Out-File -Encoding UTF8 "ZapMod.ps1"
+### 3. Compilar o executável
 
-Invoke-ps2exe -InputFile "ZapMod.ps1" -OutputFile "ZapMod.exe" -requireAdmin -title "ZapVoice Activator" -version "2.0.0.0" -iconFile "zapvoice.ico" -noOutput
+```powershell
+cd "E:\caminho\para\zapvoice-activator"
 
-Remove-Item "ZapMod.ps1"
+Invoke-ps2exe -InputFile "ZapMod.ps1" -OutputFile "ZapMod.exe" -requireAdmin -title "ZapVoice Activator" -version "2.0.0.0" -iconFile "zapvoice.ico"
 ```
 
 O executável gerado será o `ZapMod.exe` com o ícone `zapvoice.ico`.
@@ -91,10 +96,21 @@ Para atualizar o comportamento do activator para **todos os usuários**:
 ```
 zapvoice-activator/
 ├── ZapVoice_System_Redirect.ps1   # Script principal (carregado via GitHub)
+├── ZapMod.ps1                     # Fonte do executável
 ├── ZapMod.exe                     # Executável distribuído aos usuários
 ├── zapvoice.ico                   # Ícone do executável
 └── README.md                      # Este arquivo
 ```
+
+---
+
+## .gitignore recomendado
+
+```
+ZapMod.exe
+```
+
+> O `.exe` não precisa ser versionado — qualquer um com o `ZapMod.ps1` e o `ps2exe` consegue recompilar.
 
 ---
 
