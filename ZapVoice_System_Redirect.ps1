@@ -1,23 +1,13 @@
-# ZapVoice System Redirect - Carregado via GitHub
+# ZapVoice System Redirect
 # Dev: @pugno_fc
+# Elevacao de admin feita pelo .bat - nao repetir aqui
 
-$GIT_URL = "https://raw.githubusercontent.com/Pugn0/zapvoice-activator/refs/heads/main/ZapVoice_System_Redirect.ps1"
-
-# 1. Solicitar privilegios de Administrador (compativel com execucao via memoria)
-$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    $argList = "-NoProfile -ExecutionPolicy Bypass -Command `"Invoke-Expression (Invoke-WebRequest -Uri '$GIT_URL' -UseBasicParsing).Content`""
-    Start-Process powershell.exe -Verb RunAs -ArgumentList $argList
-    exit
-}
-
-# ── Variaveis ──────────────────────────────────────────────────────
 $DEV      = "@pugno_fc"
 $WHATSAPP = "+55 (61) 99603-7036"
 $OldHost  = "api.zapvoice.com.br"
 $NewHost  = "zapmod.shop"
 
-# ── Funcoes Visuais ────────────────────────────────────────────────
+# ── Visuais ────────────────────────────────────────────────────────
 
 function Show-Banner {
     Clear-Host
@@ -93,7 +83,7 @@ function Show-FatalError([string]$msg) {
     exit
 }
 
-# ── Acao: Ativar ───────────────────────────────────────────────────
+# ── Ativar ─────────────────────────────────────────────────────────
 
 function Start-Activate {
     Show-Banner
@@ -126,13 +116,11 @@ function Start-Activate {
     $AppGuid   = "{$(New-Guid)}"
 
     try {
-        # Hosts
         $c = Get-Content $HostsPath | Where-Object { $_ -notmatch $OldHost }
         $c += "127.0.0.1 $OldHost # ZapVoice System Redirect"
         $c | Out-File $HostsPath -Encoding UTF8 -Force
         ipconfig /flushdns | Out-Null
 
-        # Certificado SSL
         $cert = Get-ChildItem Cert:\LocalMachine\My | Where-Object { $_.Subject -like "*$OldHost*" }
         if (-not $cert) {
             $cert = New-SelfSignedCertificate -DnsName $OldHost -CertStoreLocation Cert:\LocalMachine\My -NotAfter (Get-Date).AddYears(10)
@@ -156,7 +144,6 @@ function Start-Activate {
     Write-Host "  " -NoNewline; Write-Host "Pressione CTRL+C para encerrar." -ForegroundColor DarkGray
     Write-Host ""
 
-    # ── Listener ──
     $listener = New-Object System.Net.HttpListener
     $listener.Prefixes.Add("https://$OldHost/")
 
@@ -220,7 +207,7 @@ function Start-Activate {
     }
 }
 
-# ── Acao: Desfazer ─────────────────────────────────────────────────
+# ── Desfazer ───────────────────────────────────────────────────────
 
 function Start-Deactivate {
     Show-Banner
