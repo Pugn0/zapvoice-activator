@@ -155,10 +155,6 @@ function Start-Activate {
             $res       = $context.Response
             $targetUrl = "https://$NewHost" + $req.RawUrl
 
-            Write-Host "  " -NoNewline
-            Write-Host "[>>]" -ForegroundColor Cyan -NoNewline
-            Write-Host " $($req.HttpMethod) -> $targetUrl" -ForegroundColor White
-
             try {
                 [System.Net.ServicePointManager]::ServerCertificateValidationCallback = { $true }
                 $webReq        = [System.Net.HttpWebRequest]::Create($targetUrl)
